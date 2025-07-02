@@ -1,56 +1,59 @@
-# Node
+# Node.js
 node_modules/
-
-# Build output
-dist/
-build/
-.svelte-kit/
-.vite/
-
-# Backend build (if using TypeScript or transpilers)
-backend/dist/
-backend/build/
-
-# Frontend build (if using TypeScript or transpilers)
-frontend-miniapp/dist/
-frontend-miniapp/build/
-frontend-miniapp/.svelte-kit/
-frontend-miniapp/.vite/
-
-# Admin dashboard build (if present)
-admin-dashboard/dist/
-admin-dashboard/build/
-
-# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
-# Env files
-.env
-.env.*
-backend/.env
-frontend-miniapp/.env
-admin-dashboard/.env
+# Logs
+logs/
+*.log
+*.log.*
 
-# OS junk
+# OS files
 .DS_Store
 Thumbs.db
-.AppleDouble
-.LSOverride
 
-# Editor junk
-.vscode/
+# Environment files
+.env
+.env.*
+
+# Build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Svelte/Vite
+.vite/
+.svelte-kit/
+*.svelte.d.ts
+
+# React
+admin-dashboard/.env
+admin-dashboard/build/
+admin-dashboard/node_modules/
+admin-dashboard/coverage/
+
+# Svelte
+frontend-miniapp/.env
+frontend-miniapp/dist/
+frontend-miniapp/node_modules/
+frontend-miniapp/.svelte-kit/
+frontend-miniapp/.vite/
+
+# Backend
+backend/.env
+backend/node_modules/
+backend/coverage/
+
+# Misc
 .idea/
+.vscode/
 *.swp
 *.swo
-
-# Svelte/JS config
-*.local
-
-# Optional: ignore test coverage
-coverage/
-
-# Ignore submodule pointer if not needed
-.gitmodules 
+*.bak
+*.tmp 
