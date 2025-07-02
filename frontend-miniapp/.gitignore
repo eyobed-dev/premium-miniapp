@@ -1,0 +1,45 @@
+# Node
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Vite
+.vite/
+
+# Svelte
+.svelte-kit/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env files
+.env
+.env.*
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor junk
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Svelte/JS config
+*.local
+
+# Optional: ignore test coverage
+coverage/
+
+# Ignore Mac system files
+.AppleDouble
+.LSOverride
+
+# Ignore submodule pointer if not needed
+.gitmodules
