@@ -25,7 +25,7 @@
     loadingPrices = true;
     priceError = '';
     try {
-      const res = await fetch(`http://192.168.1.8:5000/api/prices`);
+      const res = await fetch(`http://localhost:5000/api/prices`);
       if (!res.ok) throw new Error('Failed to fetch prices');
       prices = await res.json();
       if (prices.telegramstars && Array.isArray(prices.telegramstars)) {

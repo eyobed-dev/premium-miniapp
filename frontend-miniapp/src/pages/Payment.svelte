@@ -6,6 +6,8 @@
   let paymentInfo = {};
   let showModal = false;
   let isPaying = false;
+  let payerName = '';
+  let payerPhone = '';
 
   onMount(async () => {
     const params = new URLSearchParams(window.location.search);
@@ -27,6 +29,14 @@
   });
 
   function pay() {
+    if ((paymentMethod === 'telebirr' || paymentMethod === 'cbebirr') && (!payerName.trim() || !payerPhone.trim())) {
+      alert('Please enter your name and phone number.');
+      return;
+    }
+    if (paymentMethod === 'cbe_direct' && !payerName.trim()) {
+      alert('Please enter your name.');
+      return;
+    }
     showModal = true;
   }
 
@@ -45,11 +55,11 @@
   function getInstruction() {
     let amount = orderDetails.amount || orderDetails.price || '';
     if (paymentMethod === 'telebirr') {
-      return `Send the quoted amount to <b>${paymentInfo.telebirrPhone || '...'}</b> using Telebirr. After payment, upload your transaction number or screenshot as proof.`;
+      return `Send <b>${amount} ETB</b> to <span class='copyable'>${paymentInfo.telebirrPhone || '...'}</span> (<b>${paymentInfo.telebirrName || '...'}</b>) using Telebirr. <button class='copy-btn' onclick=\"navigator.clipboard.writeText('${paymentInfo.telebirrPhone || ''}')\">Copy</button><br>After payment, upload your transaction number or screenshot as proof.`;
     } else if (paymentMethod === 'cbebirr') {
-      return `Send the quoted amount to <b>${paymentInfo.cbebirrPhone || '...'}</b> using CBE Birr. After payment, upload your transaction number or screenshot as proof.`;
+      return `Send <b>${amount} ETB</b> to <span class='copyable'>${paymentInfo.cbebirrPhone || '...'}</span> (<b>${paymentInfo.cbebirrName || '...'}</b>) using CBE Birr. <button class='copy-btn' onclick=\"navigator.clipboard.writeText('${paymentInfo.cbebirrPhone || ''}')\">Copy</button><br>After payment, upload your transaction number or screenshot as proof.`;
     } else if (paymentMethod === 'cbe_direct') {
-      return `Deposit the quoted amount to account <b>${paymentInfo.cbeAccount || '...'}</b> at any CBE branch or via CBE mobile/ATM. After payment, upload your transaction number or screenshot as proof.`;
+      return `Deposit <b>${amount} ETB</b> to account <span class='copyable'>${paymentInfo.cbeAccount || '...'}</span> (<b>${paymentInfo.cbeAccountName || '...'}</b>) via CBE mobile. <button class='copy-btn' onclick=\"navigator.clipboard.writeText('${paymentInfo.cbeAccount || ''}')\">Copy</button><br>After payment, upload your transaction number or screenshot as proof.`;
     }
     return '';
   }
@@ -73,6 +83,27 @@
         </label>
       </div>
     </div>
+    {#if paymentMethod === 'telebirr' || paymentMethod === 'cbebirr'}
+      <div class="extra-fields">
+        <label>
+          Name:
+          <input type="text" bind:value={payerName} placeholder="Your name" required />
+        </label>
+        <label>
+          Phone Number:
+          <input type="tel" bind:value={payerPhone} placeholder="09xxxxxxxx" required pattern="^09[0-9]{8}$"  />
+          <span class="helper-text">Format: 0936123456</span>
+        </label>
+      </div>
+    {/if}
+    {#if paymentMethod === 'cbe_direct'}
+      <div class="extra-fields">
+        <label>
+          Name:
+          <input type="text" bind:value={payerName} placeholder="Your name" required />
+        </label>
+      </div>
+    {/if}
     <div class="payment-category">
       <h3>Bank Transfer</h3>
       <div class="payment-options">
@@ -204,5 +235,55 @@ h2 {
   font-size: 1rem;
   cursor: pointer;
   text-decoration: underline;
+}
+.extra-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+.extra-fields label {
+  font-size: 1rem;
+  color: #22223b;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+}
+.helper-text {
+  color: #888;
+  font-size: 0.95em;
+  margin-top: 0.1rem;
+}
+input[type="text"], input[type="tel"] {
+  padding: 0.7rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  margin-top: 0.2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.copyable {
+  font-family: monospace;
+  background: #f4f4f4;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  user-select: all;
+}
+.copy-btn {
+  margin-left: 0.5em;
+  padding: 0.2em 0.7em;
+  font-size: 0.95em;
+  border: 1px solid #4f8cff;
+  background: #f8fbff;
+  color: #4f8cff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.copy-btn:hover {
+  background: #e6f0ff;
 }
 </style> 

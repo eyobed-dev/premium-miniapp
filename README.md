@@ -68,4 +68,4 @@ Each project may require its own `.env` file. See the respective README or `.env
 ---
 
 ## License
-Specify your license here.
+GPL
