@@ -88,12 +88,16 @@
     let params = `type=${serviceType}`;
     if (serviceType === 'meseretmedia' || serviceType === 'wazemaradio') {
       params += `&email=${encodeURIComponent(email)}&duration=${duration}`;
+      if (selectedPrice != null) params += `&amount=${selectedPrice}`;
     } else if (serviceType === 'telegrampro') {
       params += `&username=${encodeURIComponent(username)}&duration=${duration}`;
+      if (selectedPrice != null) params += `&amount=${selectedPrice}`;
     } else if (serviceType === 'telegramstars') {
       params += `&username=${encodeURIComponent(username)}&amount=${amount}`;
+      if (selectedPrice != null) params += `&amount=${selectedPrice}`;
     } else if (serviceType === 'chatgptpro') {
       params += `&email=${encodeURIComponent(email)}&duration=monthly`;
+      if (selectedPrice != null) params += `&amount=${selectedPrice}`;
     }
     window.location.hash = `#/payment?${params}`;
   }

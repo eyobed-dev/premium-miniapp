@@ -8,9 +8,15 @@
   let isPaying = false;
   let payerName = '';
   let payerPhone = '';
+  let accountNumber = '';
+  let accountName = '';
+  let accountLogo = '';
+  let accountLabel = '';
 
   onMount(async () => {
-    const params = new URLSearchParams(window.location.search);
+    let hash = window.location.hash || '';
+    let queryString = hash.includes('?') ? hash.split('?')[1] : '';
+    const params = new URLSearchParams(queryString);
     orderDetails = {
       type: params.get('type'),
       email: params.get('email'),
@@ -52,16 +58,38 @@
     }, 1200);
   }
 
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+  }
+
   function getInstruction() {
-    let amount = orderDetails.amount || orderDetails.price || '';
+    let amount = orderDetails.amount || '';
     if (paymentMethod === 'telebirr') {
       return `Send <b>${amount} ETB</b> to <span class='copyable'>${paymentInfo.telebirrPhone || '...'}</span> (<b>${paymentInfo.telebirrName || '...'}</b>) using Telebirr. <button class='copy-btn' onclick=\"navigator.clipboard.writeText('${paymentInfo.telebirrPhone || ''}')\">Copy</button><br>After payment, upload your transaction number or screenshot as proof.`;
     } else if (paymentMethod === 'cbebirr') {
       return `Send <b>${amount} ETB</b> to <span class='copyable'>${paymentInfo.cbebirrPhone || '...'}</span> (<b>${paymentInfo.cbebirrName || '...'}</b>) using CBE Birr. <button class='copy-btn' onclick=\"navigator.clipboard.writeText('${paymentInfo.cbebirrPhone || ''}')\">Copy</button><br>After payment, upload your transaction number or screenshot as proof.`;
     } else if (paymentMethod === 'cbe_direct') {
-      return `Deposit <b>${amount} ETB</b> to account <span class='copyable'>${paymentInfo.cbeAccount || '...'}</span> (<b>${paymentInfo.cbeAccountName || '...'}</b>) via CBE mobile. <button class='copy-btn' onclick=\"navigator.clipboard.writeText('${paymentInfo.cbeAccount || ''}')\">Copy</button><br>After payment, upload your transaction number or screenshot as proof.`;
+      return `Deposit <b>${amount} ETB</b> to account <span class="copyable">${paymentInfo.cbeAccount || '...'}</span> (<b>${paymentInfo.cbeAccountName || '...'}</b>) via CBE mobile. <button class='copy-btn' onclick=\"navigator.clipboard.writeText('${paymentInfo.cbeAccount || ''}')\">Copy</button><br>After payment, upload your transaction number or screenshot as proof.`;
     }
     return '';
+  }
+
+  // Update account details on payment method change
+  $: if (paymentMethod === 'telebirr') {
+    accountNumber = paymentInfo.telebirrPhone || '';
+    accountName = paymentInfo.telebirrName || '';
+    accountLogo = '/src/icons/Telebirr.png';
+    accountLabel = 'Telebirr';
+  } else if (paymentMethod === 'cbebirr') {
+    accountNumber = paymentInfo.cbebirrPhone || '';
+    accountName = paymentInfo.cbebirrName || '';
+    accountLogo = '/src/icons/cbebirr.jpeg';
+    accountLabel = 'CBE Birr';
+  } else if (paymentMethod === 'cbe_direct') {
+    accountNumber = paymentInfo.cbeAccount || '';
+    accountName = paymentInfo.cbeAccountName || '';
+    accountLogo = '/src/icons/cbe.png';
+    accountLabel = 'CBE Mobile';
   }
 </script>
 
@@ -83,6 +111,16 @@
         </label>
       </div>
     </div>
+    <div class="payment-category">
+      <h3>Bank Transfer</h3>
+      <div class="payment-options">
+        <label class="payment-option">
+          <input type="radio" name="method" value="cbe_direct" bind:group={paymentMethod} />
+          <img src="/src/icons/cbe.png" alt="CBE Direct Deposit" class="pay-icon" />
+          <span>CBE Direct Deposit</span>
+        </label>
+      </div>
+    </div>
     {#if paymentMethod === 'telebirr' || paymentMethod === 'cbebirr'}
       <div class="extra-fields">
         <label>
@@ -92,7 +130,6 @@
         <label>
           Phone Number:
           <input type="tel" bind:value={payerPhone} placeholder="09xxxxxxxx" required pattern="^09[0-9]{8}$"  />
-          <span class="helper-text">Format: 0936123456</span>
         </label>
       </div>
     {/if}
@@ -104,29 +141,35 @@
         </label>
       </div>
     {/if}
-    <div class="payment-category">
-      <h3>Bank Transfer</h3>
-      <div class="payment-options">
-        <label class="payment-option">
-          <input type="radio" name="method" value="cbe_direct" bind:group={paymentMethod} />
-          <img src="/src/icons/cbe.png" alt="CBE Direct Deposit" class="pay-icon" />
-          <span>CBE Direct Deposit</span>
-        </label>
-      </div>
-    </div>
     <button type="submit" class="pay-btn">Pay</button>
   </form>
 
   {#if showModal}
     <div class="modal-backdrop" on:click={() => showModal = false}></div>
     <div class="modal">
-      <h3>Payment Instructions</h3>
-      <div class="modal-content">
-        <p>{@html getInstruction()}</p>
-        <p style="margin-top:1rem;">Amount to pay: <b>{orderDetails.amount || orderDetails.price || '-'} ETB</b></p>
-        <p style="margin-top:1rem; color:#888; font-size:0.95em;">After payment, you will be asked to upload your proof (txn no or screenshot).</p>
+      <h3>Open {accountLabel} App and Pay to this Account and press I have paid</h3>
+      <div class="pay-instruction-box">
+        <div class="pay-instruction-header">
+          <img src={accountLogo} alt="logo" class="pay-instruction-logo" />
+          <span class="pay-instruction-label">{accountLabel}</span>
+        </div>
+        <div class="pay-instruction-details">
+          <div class="pay-instruction-row">
+            <span class="pay-instruction-number">{accountNumber || '...'}</span>
+            <button class="copy-btn-2" on:click={() => copyToClipboard(accountNumber)} title="Copy to clipboard">
+              📋 Copy
+            </button>
+          </div>
+          <div class="pay-instruction-name">{accountName || '...'}</div>
+        </div>
+        <div class="pay-instruction-amount">
+          <span>Amount:</span> <b>{orderDetails.amount || '-'} ETB</b>
+        </div>
       </div>
-      <button class="pay-btn" on:click={confirmPaid} disabled={isPaying}>{isPaying ? 'Processing...' : 'I have paid'}</button>
+      <div class="modal-content">
+        <p style="margin-top:1rem; color:#888; font-size:0.95em;">Our system will check your payment and you will be notified automatically.</p>
+      </div>
+      <button class="pay-btn" on:click={confirmPaid} disabled={isPaying}>{isPaying ? 'Checking...' : 'I have paid'}</button>
       <button class="modal-close" on:click={() => showModal = false}>Cancel</button>
     </div>
   {/if}
@@ -285,5 +328,86 @@ input[type="text"], input[type="tel"] {
 }
 .copy-btn:hover {
   background: #e6f0ff;
+}
+.pay-instruction-box {
+  background: linear-gradient(90deg, #e6f9ed 0%, #d0f5e6 100%);
+  border: 1.5px solid #7ed6a7;
+  border-radius: 1rem;
+  padding: 1.3rem 1.5rem 1.1rem 1.5rem;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 2px 12px 0 rgba(60,180,120,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 270px;
+  max-width: 100vw;
+}
+.pay-instruction-header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.7rem;
+}
+.pay-instruction-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #b2f2d7;
+}
+.pay-instruction-label {
+  font-size: 1.1rem;
+  color:rgb(65, 65, 65);
+  font-weight: 600;
+}
+.pay-instruction-details {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+.pay-instruction-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.2rem;
+}
+.pay-instruction-number {
+  font-family: monospace;
+  font-size: 1.15rem;
+  background: #f4fff8;
+  padding: 0.18em 0.7em;
+  border-radius: 6px;
+  color:rgb(5, 5, 5);
+  user-select: all;
+  border: 1px solid #b2f2d7;
+}
+.copy-btn-2 {
+  background: #7ed6a7;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 0.3em 0.9em;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+}
+.copy-btn-2:hover {
+  background: #4bbf7b;
+}
+.pay-instruction-name {
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  color:rgb(39, 41, 40);
+  margin-left: 2px;
+  margin-bottom: 0.2rem;
+}
+.pay-instruction-amount {
+  margin-top: 0.5rem;
+  font-size: 1.08rem;
+  color: #22223b;
+  font-weight: 500;
 }
 </style> 
