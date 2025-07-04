@@ -8,10 +8,14 @@
   let isPaying = false;
   let payerName = '';
   let payerPhone = '';
+  let txnNo = '';
   let accountNumber = '';
   let accountName = '';
   let accountLogo = '';
   let accountLabel = '';
+  let payError = '';
+
+  let telegramUser = null;
 
   onMount(async () => {
     let hash = window.location.hash || '';
@@ -20,6 +24,7 @@
     orderDetails = {
       type: params.get('type'),
       email: params.get('email'),
+      username: params.get('username'),
       duration: params.get('duration'),
       amount: params.get('amount'),
     };
@@ -31,6 +36,12 @@
       }
     } catch (e) {
       paymentInfo = {};
+    }
+    // Get Telegram user info from WebApp
+    // @ts-ignore
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+      // @ts-ignore
+      telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
     }
   });
 
@@ -46,16 +57,42 @@
     showModal = true;
   }
 
-  function confirmPaid() {
+  async function confirmPaid() {
     isPaying = true;
-    setTimeout(() => {
-      isPaying = false;
-      if (Math.random() > 0.2) {
+    payError = '';
+    // Compose order payload
+    let orderPayload = {
+      service_type: orderDetails.type,
+      service_identifier: orderDetails.email || orderDetails.username || '',
+      amount: orderDetails.amount,
+      payment_method: paymentMethod,
+      payer_name: payerName,
+      payer_phone: payerPhone,
+      status: 'pending',
+      payment_proof: txnNo || null
+    };
+    // Add user info
+    if (telegramUser) {
+      orderPayload.telegram_id = telegramUser.id;
+    }
+    try {
+      const res = await fetch('http://localhost:5000/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      });
+      if (res.ok) {
         window.location.hash = '#/success';
       } else {
+        payError = 'Failed to create order. Please try again.';
         window.location.hash = '#/failure';
       }
-    }, 1200);
+    } catch (e) {
+      payError = 'Network error. Please try again.';
+      window.location.hash = '#/failure';
+    } finally {
+      isPaying = false;
+    }
   }
 
   function copyToClipboard(text) {
@@ -168,8 +205,15 @@
       </div>
       <div class="modal-content">
         <p style="margin-top:1rem; color:#888; font-size:0.95em;">Our system will check your payment and you will be notified automatically.</p>
+        <label style="display:block; margin-top:1rem;">
+          Transaction Number (Txn No):
+          <input type="text" bind:value={txnNo} placeholder="Enter transaction/reference number (optional)" style="margin-top:0.5rem; width:100%;" />
+        </label>
+        {#if payError}
+          <p style="color:red; margin-top:0.5rem;">{payError}</p>
+        {/if}
       </div>
-      <button class="pay-btn" on:click={confirmPaid} disabled={isPaying}>{isPaying ? 'Checking...' : 'I have paid'}</button>
+      <button class="pay-btn" on:click={confirmPaid} disabled={isPaying}>{isPaying ? 'Processing...' : 'I have paid'}</button>
       <button class="modal-close" on:click={() => showModal = false}>Cancel</button>
     </div>
   {/if}

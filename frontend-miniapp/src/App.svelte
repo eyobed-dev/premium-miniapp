@@ -5,6 +5,7 @@
   import Payment from './pages/Payment.svelte';
   import Success from './pages/Success.svelte';
   import Failure from './pages/Failure.svelte';
+  import { onMount } from 'svelte';
 
   const routes = {
     '/': Home,
@@ -13,6 +14,26 @@
     '/success': Success,
     '/failure': Failure
   };
+
+  onMount(() => {
+    // Check for Telegram WebApp user info and send to backend
+    // @ts-ignore
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+      // @ts-ignore
+      const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+      fetch('http://localhost:5000/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telegram_id: tgUser.id,
+          telegram_username: tgUser.username,
+          first_name: tgUser.first_name,
+          last_name: tgUser.last_name,
+          language_code: tgUser.language_code
+        })
+      });
+    }
+  });
 </script>
 
 <Router {routes} />
