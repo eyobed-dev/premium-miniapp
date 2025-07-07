@@ -8,7 +8,10 @@ router.get('/', (req, res) => {
     cbeAccount: process.env.CBE_ACCOUNT || '',
     telebirrName: process.env.TELEBIRR_NAME || '',
     cbebirrName: process.env.CBEBIRR_NAME || '',
-    cbeAccountName: process.env.CBE_ACCOUNT_NAME || ''
+    cbeAccountName: process.env.CBE_ACCOUNT_NAME || '',
+    telebirrDeepLink: process.env.TELEBIRR_DEEPLINK || '',
+    cbebirrDeepLink: process.env.CBEBIRR_DEEPLINK || '',
+    cbeDirectDeepLink: process.env.CBE_DIRECT_DEEPLINK || ''
   });
 });
 

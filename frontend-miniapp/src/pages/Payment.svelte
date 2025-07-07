@@ -16,6 +16,8 @@
   let payError = '';
 
   let telegramUser = null;
+  let showManual = false;
+  let deepLink = '';
 
   // Add a reactive border color for the tab group and active tab
   $: borderColor = paymentMethod === 'telebirr' ? '#4bbf7b' : '#7c3aed';
@@ -121,16 +123,19 @@
     accountName = paymentInfo.telebirrName || '';
     accountLogo = '/src/icons/Telebirr.png';
     accountLabel = 'Telebirr';
+    deepLink = paymentInfo.telebirrDeepLink || '';
   } else if (paymentMethod === 'cbebirr') {
     accountNumber = paymentInfo.cbebirrPhone || '';
     accountName = paymentInfo.cbebirrName || '';
     accountLogo = '/src/icons/cbebirr.jpeg';
     accountLabel = 'CBE Birr';
+    deepLink = paymentInfo.cbebirrDeepLink || '';
   } else if (paymentMethod === 'cbe_direct') {
     accountNumber = paymentInfo.cbeAccount || '';
     accountName = paymentInfo.cbeAccountName || '';
     accountLogo = '/src/icons/cbe.png';
     accountLabel = 'CBE Mobile';
+    deepLink = paymentInfo.cbeDirectDeepLink || '';
   }
 </script>
 
@@ -172,7 +177,7 @@
           </label>
           <label>
             Phone Number:
-            <input type="tel" bind:value={payerPhone} placeholder="09xxxxxxxx" required pattern="^09[0-9]{8}$"  />
+            <input type="tel" bind:value={payerPhone} placeholder="09xxxxxxxx"   />
           </label>
         </div>
       {/if}
@@ -184,7 +189,7 @@
           </label>
         </div>
       {/if}
-      <button type="submit" class="pay-btn">
+      <button type="submit" class="btn pay-btn">
         <img src={accountLogo} alt={accountLabel} class="pay-btn-icon" />
         Pay with {accountLabel}
       </button>
@@ -201,37 +206,61 @@
   {#if showModal}
     <div class="modal-backdrop" on:click={() => showModal = false}></div>
     <div class="modal">
-      <h3>Open {accountLabel} App and Pay to this Account and press I have paid</h3>
-      <div class="pay-instruction-box">
-        <div class="pay-instruction-header">
-          <img src={accountLogo} alt="logo" class="pay-instruction-logo" />
-          <span class="pay-instruction-label">{accountLabel}</span>
-        </div>
-        <div class="pay-instruction-details">
-          <div class="pay-instruction-row">
-            <span class="pay-instruction-number">{accountNumber || '...'}</span>
-            <button class="copy-btn-2" on:click={() => copyToClipboard(accountNumber)} title="Copy to clipboard">
-              📋 Copy
-            </button>
-          </div>
-          <div class="pay-instruction-name">{accountName || '...'}</div>
-        </div>
-        <div class="pay-instruction-amount">
-          <span>Amount:</span> <b>{orderDetails.amount || '-'} ETB</b>
+      <button class="manual-toggle-btn" on:click={() => showManual = !showManual} title="Show manual payment instructions">
+        📝 Pay manually
+      </button>
+      <h3>Pay with {accountLabel}</h3>
+      <div class="open-app-section">
+        {#if deepLink}
+          <a
+            class="btn"
+            href={deepLink}
+            target="_blank"
+            rel="noopener"
+          >
+            <img src={accountLogo} alt={accountLabel} class="pay-btn-icon" />
+            🚀 Open {accountLabel} App
+          </a>
+        {:else}
+          <span style="color:#888;">App link unavailable</span>
+        {/if}
+        <div class="amount-info">
+          Amount: <b>{orderDetails.amount || '-'} ETB</b>
         </div>
       </div>
+      {#if showManual}
+        <div class="pay-instruction-box">
+          <div class="pay-instruction-header">
+            <img src={accountLogo} alt="logo" class="pay-instruction-logo" />
+            <span class="pay-instruction-label">{accountLabel}</span>
+          </div>
+          <div class="pay-instruction-details">
+            <div class="pay-instruction-row">
+              <span class="pay-instruction-number">{accountNumber || '...'}</span>
+              <button class="copy-btn-2" on:click={() => copyToClipboard(accountNumber)} title="Copy to clipboard">
+                📋 Copy
+              </button>
+            </div>
+            <div class="pay-instruction-name">{accountName || '...'}</div>
+          </div>
+          <div class="pay-instruction-amount">
+            <span>Amount:</span> <b>{orderDetails.amount || '-'} ETB</b>
+          </div>
+        </div>
+      {/if}
       <div class="modal-content">
-        <p style="margin-top:1rem; color:#888; font-size:0.95em;">Our system will check your payment and you will be notified automatically.</p>
-        <label style="display:block; margin-top:1rem;">
-          Transaction Number (Txn No):
-          <input type="text" bind:value={txnNo} placeholder="Enter transaction/reference number (optional)" style="margin-top:0.5rem; width:100%;" />
-        </label>
+        
+          <input type="text" bind:value={txnNo} placeholder="Enter transaction number (optional)" style="margin-top:0.5rem; width:100%;" />
+      
         {#if payError}
           <p style="color:red; margin-top:0.5rem;">{payError}</p>
         {/if}
       </div>
-      <button class="pay-btn" on:click={confirmPaid} disabled={isPaying}>{isPaying ? 'Processing...' : 'I have paid'}</button>
+      <button class="btn" on:click={confirmPaid} disabled={isPaying}>
+        {isPaying ? 'Processing...' : 'I have paid'}
+      </button>
       <button class="modal-close" on:click={() => showModal = false}>Cancel</button>
+      <p style="margin-top:1rem; color:#888; font-size:0.95em;">Our system will check your payment and you will be notified automatically.</p>
     </div>
   {/if}
 </main>
@@ -241,27 +270,23 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 80vh;
-  padding: 2rem 1rem;
 }
 h2 {
   margin-bottom: 2rem;
-  color: #22223b;
 }
 
 .payment-tabs-group {
   display: flex;
   flex-direction: row;
-  width: 40%;
   height: 400px;
   max-width: 600px;
   background: #f7faff;
   border-radius: 1.2rem;
-  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
+  box-shadow: 0 2px 16px 0 rgba(75, 75, 75, 0.541);
   border: 2.5px solid #e0eaff;
   overflow: hidden;
   margin-bottom: 2rem;
-  transition: border-color 0.2s;
+  transition: border-color 0.8s;
 }
 
 .payment-tabs {
@@ -311,7 +336,7 @@ h2 {
 
 .payment-form {
   position: relative;
-  min-height: 260px; /* adjust as needed for your content */
+  min-height: 260px;
   padding-bottom: 70px;
   background: #fff;
   border-radius: 0;
@@ -421,7 +446,7 @@ input[type="text"], input[type="tel"] {
   background: #e6f0ff;
 }
 
-/* Modal styles */
+
 .modal-backdrop {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -438,7 +463,6 @@ input[type="text"], input[type="tel"] {
   box-shadow: 0 4px 32px 0 rgba(60,60,60,0.18);
   padding: 2rem 2.5rem 1.5rem 2.5rem;
   z-index: 1001;
-  min-width: 150px;
   max-width: 90vw;
   display: flex;
   flex-direction: column;
@@ -448,6 +472,56 @@ input[type="text"], input[type="tel"] {
   margin-bottom: 1.5rem;
   text-align: center;
 }
+
+/* Consolidated button styles */
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: linear-gradient(180deg, #fff 80%, #f6f7fa 100%);
+  color: #22223b;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.7rem;
+  padding: 0.9rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 4px 0 rgba(60,60,60,0.07);
+  transition: background 0.15s, color 0.15s, border 0.15s, box-shadow 0.15s;
+  width: fit-content;
+  margin: 0 auto;
+  text-decoration: none;
+}
+.btn:active {
+  box-shadow: inset 0 4px 8px 0 rgba(60,60,60,0.13);
+  background: linear-gradient(180deg, #f6f7fa 60%, #fff 100%);
+}
+
+/* Manual toggle button uses .btn base with minor overrides */
+.manual-toggle-btn {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.5rem;
+  padding: 0.45em 1.1em;
+  font-size: 1em;
+  background: #f7faff;
+  color: #4f8cff;
+  border: 1.5px solid #a3bffa;
+  border-radius: 0.7rem;
+  box-shadow: 0 1px 4px 0 rgba(60,60,60,0.07);
+  margin: 0;
+  width: auto;
+}
+.manual-toggle-btn:hover {
+  background: #e6f0ff;
+  color: #2d6cdf;
+  border-color: #4f8cff;
+}
+.manual-toggle-btn:active {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
 .modal-close {
   margin-top: 1rem;
   background: none;
@@ -540,6 +614,17 @@ input[type="text"], input[type="tel"] {
 }
 
 
+.open-app-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+.amount-info {
+  margin-top: 0.7rem;
+  font-size: 1.1rem;
+  color: #22223b;
+}
 
 @media (max-width: 700px) {
   .payment-tabs-group {
@@ -573,5 +658,28 @@ input[type="text"], input[type="tel"] {
     border-left: none;
     border-top: 2.5px solid #e0eaff;
   }
+}
+
+/* Add or update styles for open-app-btn for extra prominence */
+.open-app-btn {
+  font-size: 1.13em;
+  padding: 1em 2em;
+  margin-bottom: 0.7em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 12px 0 rgba(79,140,255,0.10);
+  background: linear-gradient(90deg, #4f8cff 60%, #7c3aed 100%);
+  color: #fff !important;
+  border: none;
+  border-radius: 0.8em;
+  transition: background 0.18s, box-shadow 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+}
+.open-app-btn:hover {
+  background: linear-gradient(90deg, #2d6cdf 60%, #5b21b6 100%);
+  box-shadow: 0 4px 18px 0 rgba(79,140,255,0.16);
+  color: #fff !important;
 }
 </style> 
