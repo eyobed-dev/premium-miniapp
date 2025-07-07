@@ -17,6 +17,10 @@
 
   let telegramUser = null;
 
+  // Add a reactive border color for the tab group and active tab
+  $: borderColor = paymentMethod === 'telebirr' ? '#4bbf7b' : '#7c3aed';
+  $: activeTabBg = '#fff'; // content background
+
   onMount(async () => {
     let hash = window.location.hash || '';
     let queryString = hash.includes('?') ? hash.split('?')[1] : '';
@@ -132,54 +136,67 @@
 
 <main class="payment-container">
   <h2>Choose Payment Method</h2>
-  <form class="payment-form" on:submit|preventDefault={pay}>
-    <div class="payment-category">
-      <h3>Mobile Money</h3>
-      <div class="payment-options">
-        <label class="payment-option">
-          <input type="radio" name="method" value="telebirr" bind:group={paymentMethod} />
-          <img src="/src/icons/Telebirr.png" alt="Telebirr" class="pay-icon" />
-          <span>Telebirr</span>
-        </label>
-        <label class="payment-option">
-          <input type="radio" name="method" value="cbebirr" bind:group={paymentMethod} />
-          <img src="/src/icons/cbebirr.jpeg" alt="CBE Birr" class="pay-icon" />
-          <span>CBE Birr</span>
-        </label>
+  <div class="payment-tabs-group" style="border-color: {borderColor};">
+    <div class="payment-tabs">
+      <div
+        class="payment-tab {paymentMethod === 'telebirr' ? 'active' : ''}"
+        style="{paymentMethod === 'telebirr' ? `background:${activeTabBg}; border-color:${borderColor}; box-shadow:inset 0 2px 8px 0 rgba(75,191,123,0.08); z-index:2;` : ''}"
+        on:click={() => paymentMethod = 'telebirr'}
+      >
+        <img src="/src/icons/Telebirr.png" alt="Telebirr" class="tab-icon" />
+        <span>Telebirr</span>
+      </div>
+      <div
+        class="payment-tab {paymentMethod === 'cbebirr' ? 'active' : ''}"
+        style="{paymentMethod === 'cbebirr' ? `background:${activeTabBg}; border-color:${borderColor}; box-shadow:inset 0 2px 8px 0 rgba(124,58,237,0.08); z-index:2;` : ''}"
+        on:click={() => paymentMethod = 'cbebirr'}
+      >
+        <img src="/src/icons/cbebirr.jpeg" alt="CBE Birr" class="tab-icon" />
+        <span>CBE Birr</span>
+      </div>
+      <div
+        class="payment-tab {paymentMethod === 'cbe_direct' ? 'active' : ''}"
+        style="{paymentMethod === 'cbe_direct' ? `background:${activeTabBg}; border-color:${borderColor}; box-shadow:inset 0 2px 8px 0 rgba(124,58,237,0.08); z-index:2;` : ''}"
+        on:click={() => paymentMethod = 'cbe_direct'}
+      >
+        <img src="/src/icons/cbe.png" alt="CBE Direct Deposit" class="tab-icon" />
+        <span>CBE Direct</span>
       </div>
     </div>
-    <div class="payment-category">
-      <h3>Bank Transfer</h3>
-      <div class="payment-options">
-        <label class="payment-option">
-          <input type="radio" name="method" value="cbe_direct" bind:group={paymentMethod} />
-          <img src="/src/icons/cbe.png" alt="CBE Direct Deposit" class="pay-icon" />
-          <span>CBE Direct Deposit</span>
-        </label>
-      </div>
+    <form class="payment-form" on:submit|preventDefault={pay} style="border-left: 0; border-color: {borderColor}; background: {activeTabBg};">
+      {#if paymentMethod === 'telebirr' || paymentMethod === 'cbebirr'}
+        <div class="extra-fields">
+          <label>
+            Name:
+            <input type="text" bind:value={payerName} placeholder="Your name" required />
+          </label>
+          <label>
+            Phone Number:
+            <input type="tel" bind:value={payerPhone} placeholder="09xxxxxxxx" required pattern="^09[0-9]{8}$"  />
+          </label>
+        </div>
+      {/if}
+      {#if paymentMethod === 'cbe_direct'}
+        <div class="extra-fields">
+          <label>
+            Name:
+            <input type="text" bind:value={payerName} placeholder="Your name" required />
+          </label>
+        </div>
+      {/if}
+      <button type="submit" class="pay-btn">
+        <img src={accountLogo} alt={accountLabel} class="pay-btn-icon" />
+        Pay with {accountLabel}
+      </button>
+    </form>
+  </div>
+  <div class="payment-footer">
+    <div class="footer-info">
+      <strong>Nexterra</strong>, a No middleman interoperable payment system for merchants.
+      <br />
+      Based on Ethswitch
     </div>
-    {#if paymentMethod === 'telebirr' || paymentMethod === 'cbebirr'}
-      <div class="extra-fields">
-        <label>
-          Name:
-          <input type="text" bind:value={payerName} placeholder="Your name" required />
-        </label>
-        <label>
-          Phone Number:
-          <input type="tel" bind:value={payerPhone} placeholder="09xxxxxxxx" required pattern="^09[0-9]{8}$"  />
-        </label>
-      </div>
-    {/if}
-    {#if paymentMethod === 'cbe_direct'}
-      <div class="extra-fields">
-        <label>
-          Name:
-          <input type="text" bind:value={payerName} placeholder="Your name" required />
-        </label>
-      </div>
-    {/if}
-    <button type="submit" class="pay-btn">Pay</button>
-  </form>
+  </div>
 
   {#if showModal}
     <div class="modal-backdrop" on:click={() => showModal = false}></div>
@@ -220,15 +237,6 @@
 </main>
 
 <style>
-.pay-icon {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  margin-right: 0.5rem;
-  border-radius: 6px;
-  background: #fff;
-  border: 1px solid #eee;
-}
 .payment-container {
   display: flex;
   flex-direction: column;
@@ -236,58 +244,184 @@
   min-height: 80vh;
   padding: 2rem 1rem;
 }
-
 h2 {
   margin-bottom: 2rem;
   color: #22223b;
 }
 
-.payment-form {
-  background: #fff;
+.payment-tabs-group {
+  display: flex;
+  flex-direction: row;
+  width: 40%;
+  height: 400px;
+  max-width: 600px;
+  background: #f7faff;
   border-radius: 1.2rem;
-  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.08);
-  padding: 2rem 2.5rem;
+  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
+  border: 2.5px solid #e0eaff;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  transition: border-color 0.2s;
+}
+
+.payment-tabs {
+  width: 190px;
+  min-width: 190px;
+  max-width: 190px;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  min-width: 320px;
-  max-width: 100vw;
+  background: #f0f6ff;
+  padding: 1.2rem 0rem 1.2rem 0.7rem;
+  box-shadow: 0 4px 2px 0 rgba(151, 148, 148, 0.123) !important;
+  z-index: 1000;
+  gap: 0.3rem;
 }
-.payment-category {
-  margin-bottom: 1.5rem;
-}
-.payment-category h3 {
-  margin-bottom: 0.7rem;
-  font-size: 1.1rem;
-  color: #4f8cff;
-  font-weight: 600;
-}
-.payment-options {
-  display: flex;
-  gap: 2rem;
-  justify-content: flex-start;
-}
-.payment-option {
+
+.payment-tab {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  font-size: 1.1rem;
+  padding: 0.7rem;
+  border-radius: 0.7rem 0rem 0rem 0.7rem;
   color: #22223b;
+  font-size: 1.08rem;
+  position: relative;
+  z-index: 1;
 }
+
+.payment-tab.active {
+  background: #fff;
+  color: #2d6cdf;
+  font-weight: 600;
+  border-radius: 0.7rem 0rem 0rem 0.7rem !important;
+  border-left: 1px solid #42424213 !important;
+  border-top: 1px solid #42424213 !important;
+  border-bottom: 1px solid #42424213 !important;
+  box-shadow: inset 0 2px 2px 0 rgba(151, 148, 148, 0.123) !important;
+  z-index: 2;
+}
+
+.tab-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.payment-form {
+  position: relative;
+  min-height: 260px; /* adjust as needed for your content */
+  padding-bottom: 70px;
+  background: #fff;
+  border-radius: 0;
+  min-width: 0;
+  max-width: 100vw;
+  flex: 1;
+  padding: 2rem 2.5rem;
+  margin: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.extra-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.extra-fields label {
+  font-size: 1rem;
+  color: #22223b;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+input[type="text"], input[type="tel"] {
+  padding: 0.7rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  margin-top: 0.2rem;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: inset 0 2px 2px 0 rgba(151, 148, 148, 0.158) !important;
+}
+
 .pay-btn {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  margin: 0 auto;
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
   margin-top: 1.5rem;
-  background: #4f8cff;
-  color: #fff;
-  border: none;
+  background: linear-gradient(180deg, #fff 80%, #f6f7fa 100%);
+  color: #22223b;
+  border: 1px solid #e0e0e0;
   border-radius: 0.7rem;
   padding: 0.9rem 1.5rem;
   font-size: 1.1rem;
   cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 4px 0 rgba(60,60,60,0.07);
+}
+
+.pay-btn:active {
+  box-shadow: inset 0 4px 8px 0 rgba(60,60,60,0.13);
+  background: linear-gradient(180deg, #f6f7fa 60%, #fff 100%);
+}
+
+.pay-btn-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid #eee;
+}
+
+.payment-footer {
+  margin-top: 2rem;
+  text-align: center;
+  color: #888;
+  font-size: 0.98rem;
+  letter-spacing: 0.01em;
+}
+
+.copyable {
+  font-family: monospace;
+  background: #f4f4f4;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  user-select: all;
+}
+
+.copy-btn {
+  margin-left: 0.5em;
+  padding: 0.2em 0.7em;
+  font-size: 0.95em;
+  border: 1px solid #4f8cff;
+  background: #f8fbff;
+  color: #4f8cff;
+  border-radius: 4px;
+  cursor: pointer;
   transition: background 0.15s;
 }
-.pay-btn:hover {
-  background: #2d6cdf;
+.copy-btn:hover {
+  background: #e6f0ff;
 }
+
+/* Modal styles */
 .modal-backdrop {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -304,7 +438,7 @@ h2 {
   box-shadow: 0 4px 32px 0 rgba(60,60,60,0.18);
   padding: 2rem 2.5rem 1.5rem 2.5rem;
   z-index: 1001;
-  min-width: 320px;
+  min-width: 150px;
   max-width: 90vw;
   display: flex;
   flex-direction: column;
@@ -321,58 +455,8 @@ h2 {
   color: #888;
   font-size: 1rem;
   cursor: pointer;
-  text-decoration: underline;
 }
-.extra-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  width: 100%;
-}
-.extra-fields label {
-  font-size: 1rem;
-  color: #22223b;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  width: 100%;
-}
-.helper-text {
-  color: #888;
-  font-size: 0.95em;
-  margin-top: 0.1rem;
-}
-input[type="text"], input[type="tel"] {
-  padding: 0.7rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  margin-top: 0.2rem;
-  width: 100%;
-  box-sizing: border-box;
-}
-.copyable {
-  font-family: monospace;
-  background: #f4f4f4;
-  padding: 0.1em 0.4em;
-  border-radius: 4px;
-  user-select: all;
-}
-.copy-btn {
-  margin-left: 0.5em;
-  padding: 0.2em 0.7em;
-  font-size: 0.95em;
-  border: 1px solid #4f8cff;
-  background: #f8fbff;
-  color: #4f8cff;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.copy-btn:hover {
-  background: #e6f0ff;
-}
+
 .pay-instruction-box {
   background: linear-gradient(90deg, #e6f9ed 0%, #d0f5e6 100%);
   border: 1.5px solid #7ed6a7;
@@ -453,5 +537,41 @@ input[type="text"], input[type="tel"] {
   font-size: 1.08rem;
   color: #22223b;
   font-weight: 500;
+}
+
+
+
+@media (max-width: 700px) {
+  .payment-tabs-group {
+    flex-direction: column;
+    border-radius: 1.2rem;
+    box-shadow: 0 2px 12px 0 rgba(60,60,60,0.08);
+    max-width: 98vw;
+  }
+  .payment-tabs {
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 2.5px solid #e0eaff;
+    padding: 0.7rem 0.7rem 0.2rem 0.7rem;
+    gap: 0.7rem;
+    justify-content: center;
+    background: #f0f6ff;
+    transition: border-color 0.2s;
+    width: auto;
+    min-width: 0;
+    max-width: 100vw;
+  }
+  .payment-tab {
+    border-radius: 0.7rem 0.7rem 0.7rem 0.7rem;
+    padding: 0.7rem 0.8rem;
+    font-size: 1rem;
+    margin-bottom: 0;
+  }
+  .payment-form {
+    border-radius: 0 0 1.2rem 1.2rem;
+    padding: 1.5rem 1rem;
+    border-left: none;
+    border-top: 2.5px solid #e0eaff;
+  }
 }
 </style> 
