@@ -18,6 +18,9 @@ app.use('/api/users', userRouter);
 const orderRouter = require('./routes/order');
 app.use('/api/orders', orderRouter);
 
+const paymentRouter = require('./routes/paymentInfo');
+app.use('/api/payments', paymentRouter);
+
 // TODO: Add routes
 
 const PORT = process.env.PORT || 5000;

@@ -21,6 +21,7 @@
   let isPolling = false;
   let pollCount = 0;
   const MAX_POLLS = 30; // e.g. 30 x 4s = 2 minutes
+  let orderId = null;
 
   // Add a reactive border color for the tab group and active tab
   $: borderColor = paymentMethod === 'telebirr' ? '#4bbf7b' : '#951781';
@@ -55,7 +56,7 @@
     }
   });
 
-  function pay() {
+  async function pay() {
     if ((paymentMethod === 'telebirr' || paymentMethod === 'cbebirr') && (!payerName.trim() || !payerPhone.trim())) {
       alert('Please enter your name and phone number.');
       return;
@@ -67,6 +68,32 @@
     // Open deep link if available
     if (deepLink) {
       window.open(deepLink, '_blank');
+    }
+    // Create pending order in backend
+    try {
+      const orderPayload = {
+        service_type: orderDetails.type,
+        service_identifier: orderDetails.email || orderDetails.username || '',
+        amount: orderDetails.amount,
+        payment_method: paymentMethod,
+        payer_name: payerName,
+        payer_phone: payerPhone,
+        status: 'pending',
+        payment_proof: null,
+        telegram_id: telegramUser ? telegramUser.id : null,
+        telegram_username: telegramUser ? telegramUser.username : null
+      };
+      const res = await fetch('http://localhost:5000/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      });
+      if (!res.ok) throw new Error('Order creation failed');
+      const data = await res.json();
+      orderId = data.orderId;
+    } catch (e) {
+      alert('Failed to create order. Please try again.');
+      return;
     }
     showModal = true;
     paymentStatus = 'waiting';
@@ -82,23 +109,26 @@
 
   async function checkPaymentStatus() {
     pollCount++;
-    // Simulate polling: in real app, call backend with order info
-    // Here, we'll simulate with random success after a few polls
+    if (!orderId) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/orders/${orderId}`);
+      if (!res.ok) throw new Error('Order fetch failed');
+      const order = await res.json();
+      if (order.status === 'paid') {
+        paymentStatus = 'success';
+        stopPolling();
+        return;
+      }
+      if (order.status === 'failed') {
+        paymentStatus = 'failure';
+        stopPolling();
+        return;
+      }
+    } catch (e) {
+      // Optionally handle error
+    }
     if (pollCount > MAX_POLLS) {
       paymentStatus = 'manual';
-      stopPolling();
-      return;
-    }
-    // TODO: Replace this with real backend check
-    // Example: const res = await fetch(`/api/payment-status?orderId=...`)
-    if (Math.random() > 0.92 || pollCount > 5) { // Simulate success after a few polls
-      paymentStatus = 'success';
-      stopPolling();
-      return;
-    }
-    // Simulate failure (rare)
-    if (Math.random() < 0.03) {
-      paymentStatus = 'failure';
       stopPolling();
       return;
     }
@@ -189,14 +219,12 @@
       </div>
     </div>
     <form class="payment-form" on:submit|preventDefault={pay} style="border-left: 0; border-color: {borderColor};">
-      <div class="amount-prominent">
-        Amount to pay: <b>{orderDetails.amount || '-'} ETB</b>
-      </div>
+
       {#if paymentMethod === 'telebirr' || paymentMethod === 'cbebirr'}
         <div class="extra-fields">
           <label>
             Name:
-            <input type="text" bind:value={payerName} placeholder="Your name" required />
+            <input type="text" bind:value={payerName} placeholder="Name on the account" required />
           </label>
           <label>
             Phone Number:
@@ -208,10 +236,13 @@
         <div class="extra-fields">
           <label>
             Name:
-            <input type="text" bind:value={payerName} placeholder="Your name" required />
+            <input type="text" bind:value={payerName} placeholder="Name on the account" required />
           </label>
         </div>
       {/if}
+      <div class="amount-prominent">
+        Amount to pay: <b>{orderDetails.amount || '-'} ETB</b>
+      </div>
       <button type="submit" class="btn pay-btn">
         <img src={accountLogo} alt={accountLabel} class="pay-btn-icon" />
         Pay with {accountLabel}
@@ -233,7 +264,7 @@
         <h3>Waiting for your payment...</h3>
         <div class="spinner"></div>
         <div class="amount-info">Amount: <b>{orderDetails.amount || '-'} ETB</b></div>
-        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center;">
+        <div style="display: flex; flex-direction:column; gap: 1rem; margin: 1.5rem; justify-content: center;">
           <button class="btn" on:click={showManualProof}>Pay manually</button>
           <button class="modal-close" on:click={() => { showModal = false; stopPolling(); }}>Cancel</button>
         </div>
@@ -256,7 +287,7 @@
               <span>Amount:</span> <b>{orderDetails.amount || '-'} ETB</b>
             </div>
           </div>
-          <input type="text" bind:value={txnNo} placeholder="Enter transaction number (optional)" style="margin-top:0.5rem; width:100%;" />
+          <input type="text" bind:value={txnNo} placeholder="Enter transaction number" style="margin-top:0.5rem; width:100%;" />
           <button class="btn" on:click={submitManualProof} style="margin-top:1.2rem;">Submit Proof</button>
         {/if}
       {:else if paymentStatus === 'success'}
@@ -313,7 +344,7 @@ h2 {
 .payment-tabs-group {
   display: flex;
   flex-direction: row;
-  height: 400px;
+  height: fit-content;
   max-width: 600px;
   background: #f7faff;
   border-radius: 1rem;
@@ -411,12 +442,14 @@ input[type="text"], input[type="tel"] {
   box-shadow: inset 0 2px 2px 0 rgba(151, 148, 148, 0.158) !important;
 }
 
+.amount-info {
+  margin-top: 0.7rem;
+  font-size: 1.1rem;
+  color: #22223b;
+}
+
 .pay-btn {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 16px;
-  margin: 0 auto;
+
   width: fit-content;
   display: flex;
   align-items: center;
@@ -455,28 +488,6 @@ input[type="text"], input[type="tel"] {
   letter-spacing: 0.01em;
 }
 
-.copyable {
-  font-family: monospace;
-  background: #f4f4f4;
-  padding: 0.1em 0.4em;
-  border-radius: 4px;
-  user-select: all;
-}
-
-.copy-btn {
-  margin-left: 0.5em;
-  padding: 0.2em 0.7em;
-  font-size: 0.95em;
-  border: 1px solid #4f8cff;
-  background: #f8fbff;
-  color: #4f8cff;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.copy-btn:hover {
-  background: #e6f0ff;
-}
 
 
 .modal-backdrop {
@@ -500,10 +511,8 @@ input[type="text"], input[type="tel"] {
   flex-direction: column;
   align-items: center;
 }
-.modal-content {
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
+
+
 
 /* Consolidated button styles */
 .btn {
@@ -529,33 +538,9 @@ input[type="text"], input[type="tel"] {
   background: linear-gradient(180deg, #f6f7fa 60%, #fff 100%);
 }
 
-/* Manual toggle button uses .btn base with minor overrides */
-.manual-toggle-btn {
-  position: absolute;
-  top: 1.2rem;
-  right: 1.5rem;
-  padding: 0.45em 1.1em;
-  font-size: 1em;
-  background: #f7faff;
-  color: #4f8cff;
-  border: 1.5px solid #a3bffa;
-  border-radius: 0.7rem;
-  box-shadow: 0 1px 4px 0 rgba(60,60,60,0.07);
-  margin: 0;
-  width: auto;
-}
-.manual-toggle-btn:hover {
-  background: #e6f0ff;
-  color: #2d6cdf;
-  border-color: #4f8cff;
-}
-.manual-toggle-btn:active {
-  background: #dbeafe;
-  color: #1e40af;
-}
+
 
 .modal-close {
-  margin-top: 1rem;
   background: none;
   border: none;
   color: #888;
@@ -646,17 +631,6 @@ input[type="text"], input[type="tel"] {
 }
 
 
-.open-app-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 1.2rem;
-}
-.amount-info {
-  margin-top: 0.7rem;
-  font-size: 1.1rem;
-  color: #22223b;
-}
 
 @media (max-width: 700px) {
   .payment-tabs-group {
@@ -668,8 +642,7 @@ input[type="text"], input[type="tel"] {
   .payment-tabs {
     flex-direction: row;
     border-right: none;
-    border-bottom: 2.5px solid #e0eaff;
-    padding: 0.7rem 0.7rem 0.2rem 0.7rem;
+    padding: 0.7rem 0.7rem 0rem 0.7rem;
     gap: 0.7rem;
     justify-content: center;
     background: #f0f6ff;
@@ -684,36 +657,23 @@ input[type="text"], input[type="tel"] {
     font-size: 1rem;
     margin-bottom: 0;
   }
+  .payment-tab.active {
+  background: #fff;
+  color: #2d6cdf;
+  font-weight: 600;
+  border-radius: 0.7rem 0.7rem 0rem 0rem !important;
+  border-left: 1px solid #42424213 !important;
+  border-top: 1px solid #42424213 !important;
+  border-bottom: 1px solid #42424213 !important;
+  z-index: 2;
+}
   .payment-form {
     border-radius: 0 0 1.2rem 1.2rem;
     padding: 1.5rem 1rem;
     border-left: none;
-    border-top: 2.5px solid #e0eaff;
   }
 }
 
-/* Add or update styles for open-app-btn for extra prominence */
-.open-app-btn {
-  font-size: 1.13em;
-  padding: 1em 2em;
-  margin-bottom: 0.7em;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  box-shadow: 0 2px 12px 0 rgba(79,140,255,0.10);
-  background: linear-gradient(90deg, #4f8cff 60%, #7c3aed 100%);
-  color: #fff !important;
-  border: none;
-  border-radius: 0.8em;
-  transition: background 0.18s, box-shadow 0.18s;
-  display: flex;
-  align-items: center;
-  gap: 0.7em;
-}
-.open-app-btn:hover {
-  background: linear-gradient(90deg, #2d6cdf 60%, #5b21b6 100%);
-  box-shadow: 0 4px 18px 0 rgba(79,140,255,0.16);
-  color: #fff !important;
-}
 
 .spinner {
   border: 4px solid #f3f3f3;
@@ -735,15 +695,20 @@ input[type="text"], input[type="tel"] {
 }
 .fail-x {
   font-size: 3rem;
-  color: #e74c3c;
-  margin: 1.5rem 0 1.2rem 0;
+  margin-bottom: 1.2rem;
+  text-align: center;
 }
 
 .amount-prominent {
-  font-size: 1.3rem;
-  color: #2d6cdf;
-  font-weight: 600;
-  margin-bottom: 1.2rem;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #1a3c6b;
+  background: linear-gradient(90deg, #e6f0ff 0%, #f7faff 100%);
+  border-radius: 0.7rem;
+  padding: 1rem 1rem;
+  box-shadow: 0 2px 8px 0 rgba(60, 60, 60, 0.08);
   text-align: center;
+  letter-spacing: 0.03em;
+  border: 1.5px solid #b2d4fa;
 }
 </style> 
