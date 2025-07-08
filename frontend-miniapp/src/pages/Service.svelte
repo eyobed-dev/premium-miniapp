@@ -177,7 +177,7 @@
       <button type="submit" class="order-btn">Order Payment</button>
     </form>
   {/if}
-</main>
+</main> 
 
 <style>
 .service-container {

@@ -5,7 +5,6 @@
   let orderDetails = {};
   let paymentInfo = {};
   let showModal = false;
-  let isPaying = false;
   let payerName = '';
   let payerPhone = '';
   let txnNo = '';
@@ -14,14 +13,19 @@
   let accountLogo = '';
   let accountLabel = '';
   let payError = '';
-
   let telegramUser = null;
   let showManual = false;
   let deepLink = '';
+  let paymentStatus = 'waiting'; // 'waiting', 'success', 'failure', 'manual'
+  let pollInterval = null;
+  let isPolling = false;
+  let pollCount = 0;
+  const MAX_POLLS = 30; // e.g. 30 x 4s = 2 minutes
 
   // Add a reactive border color for the tab group and active tab
-  $: borderColor = paymentMethod === 'telebirr' ? '#4bbf7b' : '#7c3aed';
-  $: activeTabBg = '#fff'; // content background
+  $: borderColor = paymentMethod === 'telebirr' ? '#4bbf7b' : '#951781';
+ $: activeTabTransparentBg = paymentMethod === 'telebirr' ? 'rgba(75, 191, 123, 0.15)' : 'rgba(149, 23, 129, 0.15)';
+
 
   onMount(async () => {
     let hash = window.location.hash || '';
@@ -60,49 +64,68 @@
       alert('Please enter your name.');
       return;
     }
+    // Open deep link if available
+    if (deepLink) {
+      window.open(deepLink, '_blank');
+    }
     showModal = true;
+    paymentStatus = 'waiting';
+    pollCount = 0;
+    startPolling();
   }
 
-  async function confirmPaid() {
-    isPaying = true;
-    payError = '';
-    // Compose order payload
-    let orderPayload = {
-      service_type: orderDetails.type,
-      service_identifier: orderDetails.email || orderDetails.username || '',
-      amount: orderDetails.amount,
-      payment_method: paymentMethod,
-      payer_name: payerName,
-      payer_phone: payerPhone,
-      status: 'pending',
-      payment_proof: txnNo || null
-    };
-    // Add user info
-    if (telegramUser) {
-      orderPayload.telegram_id = telegramUser.id;
+  function startPolling() {
+    if (isPolling) return;
+    isPolling = true;
+    pollInterval = setInterval(checkPaymentStatus, 4000);
+  }
+
+  async function checkPaymentStatus() {
+    pollCount++;
+    // Simulate polling: in real app, call backend with order info
+    // Here, we'll simulate with random success after a few polls
+    if (pollCount > MAX_POLLS) {
+      paymentStatus = 'manual';
+      stopPolling();
+      return;
     }
-    try {
-      const res = await fetch('http://localhost:5000/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload)
-      });
-      if (res.ok) {
-        window.location.hash = '#/success';
-      } else {
-        payError = 'Failed to create order. Please try again.';
-        window.location.hash = '#/failure';
-      }
-    } catch (e) {
-      payError = 'Network error. Please try again.';
-      window.location.hash = '#/failure';
-    } finally {
-      isPaying = false;
+    // TODO: Replace this with real backend check
+    // Example: const res = await fetch(`/api/payment-status?orderId=...`)
+    if (Math.random() > 0.92 || pollCount > 5) { // Simulate success after a few polls
+      paymentStatus = 'success';
+      stopPolling();
+      return;
     }
+    // Simulate failure (rare)
+    if (Math.random() < 0.03) {
+      paymentStatus = 'failure';
+      stopPolling();
+      return;
+    }
+  }
+
+  function stopPolling() {
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+    isPolling = false;
   }
 
   function copyToClipboard(text) {
     navigator.clipboard.writeText(text);
+  }
+
+  function showManualProof() {
+    paymentStatus = 'manual';
+    stopPolling();
+  }
+
+  async function submitManualProof() {
+    // Here you would send txnNo and other info to backend for manual verification
+    paymentStatus = 'waiting';
+    pollCount = 0;
+    startPolling();
   }
 
   function getInstruction() {
@@ -119,33 +142,32 @@
 
   // Update account details on payment method change
   $: if (paymentMethod === 'telebirr') {
-    accountNumber = paymentInfo.telebirrPhone || '';
-    accountName = paymentInfo.telebirrName || '';
+    accountNumber = paymentInfo?.telebirrPhone || '';
+    accountName = paymentInfo?.telebirrName || '';
     accountLogo = '/src/icons/Telebirr.png';
     accountLabel = 'Telebirr';
-    deepLink = paymentInfo.telebirrDeepLink || '';
+    deepLink = paymentInfo?.telebirrDeepLink || '';
   } else if (paymentMethod === 'cbebirr') {
-    accountNumber = paymentInfo.cbebirrPhone || '';
-    accountName = paymentInfo.cbebirrName || '';
+    accountNumber = paymentInfo?.cbebirrPhone || '';
+    accountName = paymentInfo?.cbebirrName || '';
     accountLogo = '/src/icons/cbebirr.jpeg';
     accountLabel = 'CBE Birr';
-    deepLink = paymentInfo.cbebirrDeepLink || '';
+    deepLink = paymentInfo?.cbebirrDeepLink || '';
   } else if (paymentMethod === 'cbe_direct') {
-    accountNumber = paymentInfo.cbeAccount || '';
-    accountName = paymentInfo.cbeAccountName || '';
+    accountNumber = paymentInfo?.cbeAccount || '';
+    accountName = paymentInfo?.cbeAccountName || '';
     accountLogo = '/src/icons/cbe.png';
     accountLabel = 'CBE Mobile';
-    deepLink = paymentInfo.cbeDirectDeepLink || '';
+    deepLink = paymentInfo?.cbeDirectDeepLink || '';
   }
 </script>
 
 <main class="payment-container">
   <h2>Choose Payment Method</h2>
-  <div class="payment-tabs-group" style="border-color: {borderColor};">
+  <div class="payment-tabs-group" style="border-color: {borderColor}; background: {activeTabTransparentBg};">
     <div class="payment-tabs">
       <div
         class="payment-tab {paymentMethod === 'telebirr' ? 'active' : ''}"
-        style="{paymentMethod === 'telebirr' ? `background:${activeTabBg}; border-color:${borderColor}; box-shadow:inset 0 2px 8px 0 rgba(75,191,123,0.08); z-index:2;` : ''}"
         on:click={() => paymentMethod = 'telebirr'}
       >
         <img src="/src/icons/Telebirr.png" alt="Telebirr" class="tab-icon" />
@@ -153,7 +175,6 @@
       </div>
       <div
         class="payment-tab {paymentMethod === 'cbebirr' ? 'active' : ''}"
-        style="{paymentMethod === 'cbebirr' ? `background:${activeTabBg}; border-color:${borderColor}; box-shadow:inset 0 2px 8px 0 rgba(124,58,237,0.08); z-index:2;` : ''}"
         on:click={() => paymentMethod = 'cbebirr'}
       >
         <img src="/src/icons/cbebirr.jpeg" alt="CBE Birr" class="tab-icon" />
@@ -161,14 +182,16 @@
       </div>
       <div
         class="payment-tab {paymentMethod === 'cbe_direct' ? 'active' : ''}"
-        style="{paymentMethod === 'cbe_direct' ? `background:${activeTabBg}; border-color:${borderColor}; box-shadow:inset 0 2px 8px 0 rgba(124,58,237,0.08); z-index:2;` : ''}"
         on:click={() => paymentMethod = 'cbe_direct'}
       >
-        <img src="/src/icons/cbe.png" alt="CBE Direct Deposit" class="tab-icon" />
+        <img src="/src/icons/cbe.png" alt="CBE Direct" class="tab-icon" />
         <span>CBE Direct</span>
       </div>
     </div>
-    <form class="payment-form" on:submit|preventDefault={pay} style="border-left: 0; border-color: {borderColor}; background: {activeTabBg};">
+    <form class="payment-form" on:submit|preventDefault={pay} style="border-left: 0; border-color: {borderColor};">
+      <div class="amount-prominent">
+        Amount to pay: <b>{orderDetails.amount || '-'} ETB</b>
+      </div>
       {#if paymentMethod === 'telebirr' || paymentMethod === 'cbebirr'}
         <div class="extra-fields">
           <label>
@@ -204,31 +227,52 @@
   </div>
 
   {#if showModal}
-    <div class="modal-backdrop" on:click={() => showModal = false}></div>
+    <div class="modal-backdrop"></div>
     <div class="modal">
-      <button class="manual-toggle-btn" on:click={() => showManual = !showManual} title="Show manual payment instructions">
-        📝 Pay manually
-      </button>
-      <h3>Pay with {accountLabel}</h3>
-      <div class="open-app-section">
-        {#if deepLink}
-          <a
-            class="btn"
-            href={deepLink}
-            target="_blank"
-            rel="noopener"
-          >
-            <img src={accountLogo} alt={accountLabel} class="pay-btn-icon" />
-            🚀 Open {accountLabel} App
-          </a>
-        {:else}
-          <span style="color:#888;">App link unavailable</span>
-        {/if}
-        <div class="amount-info">
-          Amount: <b>{orderDetails.amount || '-'} ETB</b>
+      {#if paymentStatus === 'waiting'}
+        <h3>Waiting for your payment...</h3>
+        <div class="spinner"></div>
+        <div class="amount-info">Amount: <b>{orderDetails.amount || '-'} ETB</b></div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center;">
+          <button class="btn" on:click={showManualProof}>Pay manually</button>
+          <button class="modal-close" on:click={() => { showModal = false; stopPolling(); }}>Cancel</button>
         </div>
-      </div>
-      {#if showManual}
+        {#if showManual}
+          <div class="pay-instruction-box" style="margin-top: 1.5rem;">
+            <div class="pay-instruction-header">
+              <img src={accountLogo} alt="logo" class="pay-instruction-logo" />
+              <span class="pay-instruction-label">{accountLabel}</span>
+            </div>
+            <div class="pay-instruction-details">
+              <div class="pay-instruction-row">
+                <span class="pay-instruction-number">{accountNumber || '...'}</span>
+                <button class="copy-btn-2" on:click={() => copyToClipboard(accountNumber)} title="Copy to clipboard">
+                  📋 Copy
+                </button>
+              </div>
+              <div class="pay-instruction-name">{accountName || '...'}</div>
+            </div>
+            <div class="pay-instruction-amount">
+              <span>Amount:</span> <b>{orderDetails.amount || '-'} ETB</b>
+            </div>
+          </div>
+          <input type="text" bind:value={txnNo} placeholder="Enter transaction number (optional)" style="margin-top:0.5rem; width:100%;" />
+          <button class="btn" on:click={submitManualProof} style="margin-top:1.2rem;">Submit Proof</button>
+        {/if}
+      {:else if paymentStatus === 'success'}
+        <h3>Payment Successful!</h3>
+        <div class="success-check">✔️</div>
+        <div class="amount-info">Amount: <b>{orderDetails.amount || '-'} ETB</b></div>
+        <p style="color: #2ecc40; margin-top: 1rem;">Thank you for your payment. Your order is being processed.</p>
+        <button class="btn" on:click={() => { showModal = false; window.location.hash = '#/'; }}>Back to Home</button>
+      {:else if paymentStatus === 'failure'}
+        <h3>Payment Failed</h3>
+        <div class="fail-x">❌</div>
+        <p style="color: #e74c3c; margin-top: 1rem;">Sorry, we could not verify your payment. Please try again or enter proof manually.</p>
+        <button class="btn" on:click={showManualProof}>Enter payment proof manually</button>
+        <button class="modal-close" on:click={() => showModal = false}>Cancel</button>
+      {:else if paymentStatus === 'manual'}
+        <h3>Manual Payment Proof</h3>
         <div class="pay-instruction-box">
           <div class="pay-instruction-header">
             <img src={accountLogo} alt="logo" class="pay-instruction-logo" />
@@ -247,23 +291,14 @@
             <span>Amount:</span> <b>{orderDetails.amount || '-'} ETB</b>
           </div>
         </div>
+        <input type="text" bind:value={txnNo} placeholder="Enter transaction number (optional)" style="margin-top:0.5rem; width:100%;" />
+        <button class="btn" on:click={submitManualProof} style="margin-top:1.2rem;">Submit Proof</button>
+        <button class="modal-close" on:click={() => showModal = false}>Cancel</button>
       {/if}
-      <div class="modal-content">
-        
-          <input type="text" bind:value={txnNo} placeholder="Enter transaction number (optional)" style="margin-top:0.5rem; width:100%;" />
-      
-        {#if payError}
-          <p style="color:red; margin-top:0.5rem;">{payError}</p>
-        {/if}
-      </div>
-      <button class="btn" on:click={confirmPaid} disabled={isPaying}>
-        {isPaying ? 'Processing...' : 'I have paid'}
-      </button>
-      <button class="modal-close" on:click={() => showModal = false}>Cancel</button>
       <p style="margin-top:1rem; color:#888; font-size:0.95em;">Our system will check your payment and you will be notified automatically.</p>
     </div>
   {/if}
-</main>
+</main> 
 
 <style>
 .payment-container {
@@ -281,9 +316,9 @@ h2 {
   height: 400px;
   max-width: 600px;
   background: #f7faff;
-  border-radius: 1.2rem;
-  box-shadow: 0 2px 16px 0 rgba(75, 75, 75, 0.541);
-  border: 2.5px solid #e0eaff;
+  border-radius: 1rem;
+  box-shadow: 0 2px 16px 0 rgba(75, 75, 75, 0.11);
+  border: 0.7px solid #f0fffc;
   overflow: hidden;
   margin-bottom: 2rem;
   transition: border-color 0.8s;
@@ -295,9 +330,7 @@ h2 {
   max-width: 190px;
   display: flex;
   flex-direction: column;
-  background: #f0f6ff;
   padding: 1.2rem 0rem 1.2rem 0.7rem;
-  box-shadow: 0 4px 2px 0 rgba(151, 148, 148, 0.123) !important;
   z-index: 1000;
   gap: 0.3rem;
 }
@@ -322,7 +355,6 @@ h2 {
   border-left: 1px solid #42424213 !important;
   border-top: 1px solid #42424213 !important;
   border-bottom: 1px solid #42424213 !important;
-  box-shadow: inset 0 2px 2px 0 rgba(151, 148, 148, 0.123) !important;
   z-index: 2;
 }
 
@@ -681,5 +713,37 @@ input[type="text"], input[type="tel"] {
   background: linear-gradient(90deg, #2d6cdf 60%, #5b21b6 100%);
   box-shadow: 0 4px 18px 0 rgba(79,140,255,0.16);
   color: #fff !important;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4f8cff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 1.5rem auto 1.2rem auto;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.success-check {
+  font-size: 3rem;
+  color: #2ecc40;
+  margin: 1.5rem 0 1.2rem 0;
+}
+.fail-x {
+  font-size: 3rem;
+  color: #e74c3c;
+  margin: 1.5rem 0 1.2rem 0;
+}
+
+.amount-prominent {
+  font-size: 1.3rem;
+  color: #2d6cdf;
+  font-weight: 600;
+  margin-bottom: 1.2rem;
+  text-align: center;
 }
 </style> 
