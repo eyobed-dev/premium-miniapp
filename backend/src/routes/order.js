@@ -8,6 +8,7 @@ const axios = require('axios');
 router.post('/', async (req, res) => {
   try {
     const order = req.body;
+    console.log('Received order:', order); // Add this
     let user_id = order.user_id;
     // If telegram_id is provided, look up or create user
     if (!user_id && order.telegram_id) {
@@ -28,6 +29,7 @@ router.post('/', async (req, res) => {
     const orderId = await orderModel.createOrder(order);
     res.status(201).json({ orderId });
   } catch (err) {
+    console.error('Order creation error:', err); // Add this
     res.status(500).json({ error: 'Failed to create order' });
   }
 });

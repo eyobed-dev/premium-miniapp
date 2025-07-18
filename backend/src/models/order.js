@@ -1,26 +1,27 @@
-const pool = require('../db/connection');
+const db = require('../db/connection');
+const { promisify } = require('util');
 
-// Order model methods
+const run = promisify(db.run.bind(db));
+const get = promisify(db.get.bind(db));
+const all = promisify(db.all.bind(db));
+
 const createOrder = async (order) => {
-  const [result] = await pool.execute(
-    `INSERT INTO orders (user_id, service_type, service_identifier, amount, payment_method, payer_name, payer_phone, status, payment_proof) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [order.user_id, order.service_type, order.service_identifier, order.amount, order.payment_method, order.payer_name, order.payer_phone, order.status || 'pending', order.payment_proof || null]
-  );
-  return result.insertId;
+  const stmt = `INSERT INTO orders (user_id, service_type, service_identifier, amount, payment_method, payer_name, payer_phone, status, payment_proof) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const result = await run(stmt, [order.user_id, order.service_type, order.service_identifier, order.amount, order.payment_method, order.payer_name, order.payer_phone, order.status || 'pending', order.payment_proof || null]);
+  // SQLite: lastID is available on the statement object
+  return result.lastID;
 };
 
 const getOrdersByUser = async (user_id) => {
-  const [rows] = await pool.execute('SELECT * FROM orders WHERE user_id = ?', [user_id]);
-  return rows;
+  return all('SELECT * FROM orders WHERE user_id = ?', [user_id]);
 };
 
 const getOrderById = async (id) => {
-  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [id]);
-  return rows[0];
+  return get('SELECT * FROM orders WHERE id = ?', [id]);
 };
 
 const updateOrderStatus = async (id, status) => {
-  await pool.execute('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
+  await run('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
 };
 
 module.exports = {

@@ -1,22 +1,26 @@
-const pool = require('../db/connection');
+const db = require('../db/connection');
+const { promisify } = require('util');
+
+const run = promisify(db.run.bind(db));
+const get = promisify(db.get.bind(db));
+const all = promisify(db.all.bind(db));
 
 const createUser = async (user) => {
-  const [result] = await pool.execute(
-    `INSERT INTO users (telegram_id, telegram_username, first_name, last_name, language_code) VALUES (?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE telegram_username = VALUES(telegram_username), first_name = VALUES(first_name), last_name = VALUES(last_name), language_code = VALUES(language_code)`,
-    [user.telegram_id, user.telegram_username, user.first_name, user.last_name, user.language_code]
-  );
-  return result.insertId || user.telegram_id;
+  // Try to insert, ignore if exists
+  await run(`INSERT OR IGNORE INTO users (telegram_id, telegram_username, first_name, last_name, language_code) VALUES (?, ?, ?, ?, ?)`, [user.telegram_id, user.telegram_username, user.first_name, user.last_name, user.language_code]);
+  // Always update fields in case of conflict
+  await run(`UPDATE users SET telegram_username = ?, first_name = ?, last_name = ?, language_code = ? WHERE telegram_id = ?`, [user.telegram_username, user.first_name, user.last_name, user.language_code, user.telegram_id]);
+  // Return the user id
+  const row = await get('SELECT id FROM users WHERE telegram_id = ?', [user.telegram_id]);
+  return row ? row.id : null;
 };
 
 const getUserByTelegramId = async (telegram_id) => {
-  const [rows] = await pool.execute('SELECT * FROM users WHERE telegram_id = ?', [telegram_id]);
-  return rows[0];
+  return get('SELECT * FROM users WHERE telegram_id = ?', [telegram_id]);
 };
 
 const getUserById = async (id) => {
-  const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [id]);
-  return rows[0];
+  return get('SELECT * FROM users WHERE id = ?', [id]);
 };
 
 module.exports = {

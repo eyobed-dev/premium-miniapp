@@ -1,14 +1,13 @@
-const mysql = require('mysql2/promise');
-require('dotenv').config();
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+const dbPath = path.join(__dirname, '../../db.sqlite');
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Failed to connect to SQLite database:', err.message);
+  } else {
+    console.log('Connected to SQLite database at', dbPath);
+  }
 });
 
-module.exports = pool; 
+module.exports = db; 
