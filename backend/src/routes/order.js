@@ -3,16 +3,19 @@ const router = express.Router();
 const orderModel = require('../models/order');
 const userModel = require('../models/user');
 const axios = require('axios');
+const adminAuth = require('../middleware/auth');
 
 // Create a new order
 router.post('/', async (req, res) => {
   try {
     const order = req.body;
-    console.log('Received order:', order); 
+    console.log('Received order:', order);
     let user_id = order.user_id;
+    // If telegram_id is provided, look up or create user
     if (!user_id && order.telegram_id) {
       let user = await userModel.getUserByTelegramId(order.telegram_id);
       if (!user) {
+        console.log('No user found for telegram_id, creating new user:', order.telegram_id);
         user_id = await userModel.createUser({
           telegram_id: order.telegram_id,
           telegram_username: order.telegram_username || '',
@@ -20,19 +23,29 @@ router.post('/', async (req, res) => {
           last_name: '',
           language_code: ''
         });
+        console.log('Created new user with id:', user_id);
       } else {
         user_id = user.id;
+        console.log('Found existing user with id:', user_id);
       }
     }
     // If no user_id and no telegram_id, reject the order
     if (!user_id && !order.telegram_id) {
+      console.warn('Order rejected: no user_id or telegram_id');
       return res.status(400).json({ error: 'Order must be associated with a user or telegram_id' });
     }
     order.user_id = user_id;
-    const orderId = await orderModel.createOrder(order);
+    // Pass payer_account if present
+    const orderData = {
+      ...order,
+      user_id,
+      payer_account: order.payer_account || null
+    };
+    const orderId = await orderModel.createOrder(orderData);
+    console.log('Order created with id:', orderId);
     res.status(201).json({ orderId });
   } catch (err) {
-    console.error('Order creation error:', err); // Add this
+    console.error('Order creation error:', err);
     res.status(500).json({ error: 'Failed to create order' });
   }
 });
@@ -73,7 +86,7 @@ router.patch('/:id/status', async (req, res) => {
 });
 
 // Get all orders (admin)
-router.get('/all', async (req, res) => {
+router.get('/all', adminAuth, async (req, res) => {
   try {
     const pool = require('../db/connection');
     const [orders] = await pool.execute('SELECT * FROM orders ORDER BY created_at DESC');
@@ -99,15 +112,23 @@ router.patch('/:id/proof', async (req, res) => {
 // Simulate Android SMS sender for a given orderId (for testing/demo only)
 router.post('/simulate-sms/:orderId', async (req, res) => {
   const orderId = req.params.orderId;
+  console.log('Simulate SMS endpoint called for orderId:', orderId);
   try {
     const order = await orderModel.getOrderById(orderId);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
-    if (order.status !== 'pending') return res.status(400).json({ error: 'Order is not pending' });
+    if (!order) {
+      console.warn('Simulate SMS: Order not found:', orderId);
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    if (order.status !== 'pending') {
+      console.warn('Simulate SMS: Order is not pending:', orderId);
+      return res.status(400).json({ error: 'Order is not pending' });
+    }
     // Simulate delay (e.g., 3 seconds)
     setTimeout(async () => {
       try {
         // Simulate a transaction ID
         const txn_id = 'SIMTXN-' + Math.floor(Math.random() * 1000000);
+        console.log('Simulate SMS: Sending payment notification for orderId:', orderId, 'txn_id:', txn_id);
         // POST to the SMS endpoint
         await axios.post('http://localhost:5000/api/payment-info/sms', {
           payer_name: order.payer_name,
@@ -115,6 +136,7 @@ router.post('/simulate-sms/:orderId', async (req, res) => {
           amount: order.amount,
           txn_id
         });
+        console.log('Simulate SMS: Payment notification sent for orderId:', orderId);
       } catch (err) {
         // Log error but don't crash
         console.error('Simulation failed:', err.message);
@@ -122,6 +144,7 @@ router.post('/simulate-sms/:orderId', async (req, res) => {
     }, 3000); // 3 second delay
     res.json({ message: 'SMS simulation started (will mark as paid in ~3s)' });
   } catch (err) {
+    console.error('Simulate SMS: Failed to simulate SMS payment:', err);
     res.status(500).json({ error: 'Failed to simulate SMS payment' });
   }
 });

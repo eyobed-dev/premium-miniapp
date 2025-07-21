@@ -7,7 +7,7 @@ const all = promisify(db.all.bind(db));
 const createOrder = async (order) => {
   return new Promise((resolve, reject) => {
     db.run(
-      `INSERT INTO orders (user_id, service_type, service_identifier, amount, payment_method, payer_name, payer_phone, status, payment_proof) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO orders (user_id, service_type, service_identifier, amount, payment_method, payer_name, payer_phone, payer_account, status, payment_proof) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         order.user_id,
         order.service_type,
@@ -16,6 +16,7 @@ const createOrder = async (order) => {
         order.payment_method,
         order.payer_name,
         order.payer_phone,
+        order.payer_account,
         order.status || 'pending',
         order.payment_proof || null
       ],

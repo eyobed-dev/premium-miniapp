@@ -1,0 +1,20 @@
+{
+  "name": "admin-dashboard-svelte",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "bulma": "^1.0.4"
+  },
+  "devDependencies": {
+    "@sveltejs/kit": "latest",
+    "@sveltejs/adapter-auto": "latest",
+    "svelte": "^4.2.8",
+    "vite": "^4.4.9"
+  }
+}

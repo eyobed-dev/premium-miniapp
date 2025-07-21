@@ -22,6 +22,7 @@
   let pollCount = 0;
   const MAX_POLLS = 30; // e.g. 30 x 4s = 2 minutes
   let orderId = null;
+  let payerAccount = "";
 
   $: borderColor = paymentMethod === "telebirr" ? "#4bbf7b" : "#951781";
   $: activeTabTransparentBg =
@@ -40,6 +41,8 @@
       duration: params.get("duration"),
       amount: params.get("amount"),
     };
+
+
     // Fetch payment info from backend
     try {
       const res = await fetch(`${API_BASE_URL}/payment-info`);
@@ -74,8 +77,8 @@
       alert("Please enter your name and phone number.");
       return;
     }
-    if (paymentMethod === "cbe_direct" && !payerName.trim()) {
-      alert("Please enter your name.");
+    if (paymentMethod === "cbe_direct" && (!payerName.trim() || !payerAccount.trim())) {
+      alert("Please enter your name and account number.");
       return;
     }
     // Open deep link if available
@@ -91,6 +94,7 @@
         payment_method: paymentMethod,
         payer_name: payerName,
         payer_phone: payerPhone,
+        payer_account: paymentMethod === "cbe_direct" ? payerAccount : payerPhone,
         status: "pending",
         payment_proof: null,
         telegram_id: telegramUser ? telegramUser.id : null,
@@ -165,7 +169,6 @@
   }
 
   async function submitManualProof() {
-    // Here you would send txnNo and other info to backend for manual verification
     paymentStatus = "waiting";
     pollCount = 0;
     startPolling();
@@ -266,6 +269,15 @@
               placeholder="Name on the account"
               required
               autocapitalize="words"
+            />
+          </label>
+          <label>
+            Account Number:
+            <input
+              type="text"
+              bind:value={payerAccount}
+              placeholder="Account number"
+              required
             />
           </label>
         </div>

@@ -22,6 +22,7 @@ function initDB() {
       payment_method TEXT NOT NULL,
       payer_name TEXT,
       payer_phone TEXT,
+      payer_account TEXT,
       status TEXT DEFAULT 'pending',
       payment_proof TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

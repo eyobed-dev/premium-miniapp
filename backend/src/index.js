@@ -21,6 +21,9 @@ app.use('/api/orders', orderRouter);
 const paymentRouter = require('./routes/paymentInfo');
 app.use('/api/payments', paymentRouter);
 
+const adminRouter = require('./routes/admin');
+app.use('/api/admin', adminRouter);
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
