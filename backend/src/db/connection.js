@@ -7,6 +7,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
     console.error('Failed to connect to SQLite database:', err.message);
   } else {
     console.log('Connected to SQLite database at', dbPath);
+    db.run('PRAGMA foreign_keys = ON');
   }
 });
 

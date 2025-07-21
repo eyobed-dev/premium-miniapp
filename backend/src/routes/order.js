@@ -8,9 +8,8 @@ const axios = require('axios');
 router.post('/', async (req, res) => {
   try {
     const order = req.body;
-    console.log('Received order:', order); // Add this
+    console.log('Received order:', order); 
     let user_id = order.user_id;
-    // If telegram_id is provided, look up or create user
     if (!user_id && order.telegram_id) {
       let user = await userModel.getUserByTelegramId(order.telegram_id);
       if (!user) {
@@ -24,6 +23,10 @@ router.post('/', async (req, res) => {
       } else {
         user_id = user.id;
       }
+    }
+    // If no user_id and no telegram_id, reject the order
+    if (!user_id && !order.telegram_id) {
+      return res.status(400).json({ error: 'Order must be associated with a user or telegram_id' });
     }
     order.user_id = user_id;
     const orderId = await orderModel.createOrder(order);

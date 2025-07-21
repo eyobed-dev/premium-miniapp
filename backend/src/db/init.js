@@ -25,7 +25,8 @@ function initDB() {
       status TEXT DEFAULT 'pending',
       payment_proof TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )`);
   });
   console.log('SQLite database initialized');

@@ -60,6 +60,10 @@
       // @ts-ignore
       telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
     }
+    // If not running in Telegram, set a fake user for dev/testing
+    if (!telegramUser) {
+      telegramUser = { id: 999999, username: 'FAKE_USER' };
+    }
   });
 
   async function pay() {
