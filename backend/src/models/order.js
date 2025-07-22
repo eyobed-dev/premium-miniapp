@@ -45,9 +45,14 @@ const updateOrderStatus = async (id, status) => {
   });
 };
 
+const getAllOrders = async () => {
+  return all('SELECT * FROM orders ORDER BY created_at DESC');
+};
+
 module.exports = {
   createOrder,
   getOrdersByUser,
   getOrderById,
   updateOrderStatus,
+  getAllOrders,
 }; 

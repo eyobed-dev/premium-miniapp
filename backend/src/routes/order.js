@@ -61,51 +61,13 @@ router.get('/user/:user_id', async (req, res) => {
   }
 });
 
-// Get order by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const order = await orderModel.getOrderById(id);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
-    res.json(order);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to get order' });
-  }
-});
-
-// Update order status
-router.patch('/:id/status', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const { status } = req.body;
-    await orderModel.updateOrderStatus(id, status);
-    res.json({ message: 'Order status updated' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update order status' });
-  }
-});
-
 // Get all orders (admin)
 router.get('/all', adminAuth, async (req, res) => {
   try {
-    const pool = require('../db/connection');
-    const [orders] = await pool.execute('SELECT * FROM orders ORDER BY created_at DESC');
+    const orders = await orderModel.getAllOrders();
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: 'Failed to get orders' });
-  }
-});
-
-// Update order proof
-router.patch('/:id/proof', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const { payment_proof } = req.body;
-    const pool = require('../db/connection');
-    await pool.execute('UPDATE orders SET payment_proof = ? WHERE id = ?', [payment_proof, id]);
-    res.json({ message: 'Order proof updated' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update order proof' });
   }
 });
 
@@ -146,6 +108,43 @@ router.post('/simulate-sms/:orderId', async (req, res) => {
   } catch (err) {
     console.error('Simulate SMS: Failed to simulate SMS payment:', err);
     res.status(500).json({ error: 'Failed to simulate SMS payment' });
+  }
+});
+
+// Update order status
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body;
+    await orderModel.updateOrderStatus(id, status);
+    res.json({ message: 'Order status updated' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update order status' });
+  }
+});
+
+// Update order proof
+router.patch('/:id/proof', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { payment_proof } = req.body;
+    const pool = require('../db/connection');
+    await pool.execute('UPDATE orders SET payment_proof = ? WHERE id = ?', [payment_proof, id]);
+    res.json({ message: 'Order proof updated' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update order proof' });
+  }
+});
+
+// Get order by ID (should be last)
+router.get('/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const order = await orderModel.getOrderById(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get order' });
   }
 });
 
