@@ -124,9 +124,18 @@
     pollInterval = setInterval(checkPaymentStatus, 4000);
   }
 
+  // DEMO: Automatically confirm payment after a few polls
   async function checkPaymentStatus() {
     pollCount++;
     if (!orderId) return;
+    // For demo: after 3 polls, mark as paid
+    if (pollCount >= 3) {
+      paymentStatus = "success";
+      stopPolling();
+      return;
+    }
+    // The following is the real logic, kept for reference but not used in demo
+    /*
     try {
       const res = await fetch(`${API_BASE_URL}/orders/${orderId}`);
       if (!res.ok) throw new Error("Order fetch failed");
@@ -144,6 +153,7 @@
     } catch (e) {
       // Optionally handle error
     }
+    */
     if (pollCount > MAX_POLLS) {
       paymentStatus = "manual";
       stopPolling();
