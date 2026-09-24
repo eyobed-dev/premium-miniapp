@@ -4,7 +4,7 @@ This repository contains three main projects:
 
 - **admin-dashboard**: React-based admin dashboard for managing orders and users.
 - **backend**: Node.js/Express backend API for order management and payment processing.
-- **frontend-miniapp**: Svelte/Vite-based miniapp for end-users to place orders and make payments.
+- **frontend**: Svelte/Vite-based miniapp for end-users to place orders and make payments.
 
 ---
 
@@ -14,7 +14,8 @@ This repository contains three main projects:
 .
 ├── admin-dashboard/      # React admin dashboard
 ├── backend/              # Node.js/Express backend API
-├── frontend-miniapp/     # Svelte/Vite miniapp
+├── frontend/             # Svelte/Vite miniapp
+├── assets/               # Screenshots and media assets
 └── README.md             # This file
 ```
 
@@ -32,7 +33,7 @@ cd premium-miniapp
 ```bash
 cd admin-dashboard && npm install && cd ..
 cd backend && npm install && cd ..
-cd frontend-miniapp && npm install && cd ..
+cd frontend && npm install && cd ..
 ```
 
 ---
@@ -55,7 +56,7 @@ npm start
 
 ### Frontend Miniapp (Svelte/Vite)
 ```bash
-cd frontend-miniapp
+cd frontend
 npm run dev
 ```
 - The miniapp will be available at [http://localhost:5173](http://localhost:5173)
