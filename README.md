@@ -1,5 +1,10 @@
 # Premium Miniapp Monorepo
 
+<p align="center">
+  <img src="assets/services.png" alt="Premium Services" width="48%" />
+  <img src="assets/payment.png" alt="Choose Payment Method" width="48%" />
+</p>
+
 This repository contains three main projects:
 
 - **admin-dashboard**: React-based admin dashboard for managing orders and users.
