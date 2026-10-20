@@ -29,10 +29,7 @@ This repository contains three main projects:
 ## Setup Instructions
 
 ### 1. Clone the repository
-```bash
-git clone <repo-url>
-cd premium-miniapp
-```
+
 
 ### 2. Install dependencies for each project
 ```bash
